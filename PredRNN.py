@@ -1,4 +1,5 @@
 import datetime
+from tokenize import Triple
 import torch
 import torch.nn as nn
 import os
@@ -11,6 +12,7 @@ import random
 import skimage.measure
 from torch.utils.data import DataLoader
 
+path = (r'C:\Users\mylar\OneDrive\Área de Trabalho\PredRNN-Radar')
 
 class SpatioTemporalLSTMCell(nn.Module):
     def __init__(self, in_channel, num_hidden, width, filter_size, stride, layer_norm):
@@ -187,11 +189,11 @@ class RNN(nn.Module):
 
 
 def train_model(start_epoch=0):
-    # 开始训练
+    
     # Cross Entropy Loss
     # SGD Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1.0e-3)
-    # error = nn.CrossEntropyLoss()  # 交叉熵
+    # error = nn.CrossEntropyLoss()  
     error = nn.MSELoss()
     count = 0
 
@@ -214,7 +216,7 @@ def train_model(start_epoch=0):
             if count % 10 == 0:
                 # Print Loss
                 print('Epoch:%d  Iteration: %d  Loss: %f' % (epoch, count, loss.item()))
-        # 计算在验证集上的loss
+      
         model.eval()
         with torch.no_grad():
             for j, (x_test, y_test) in enumerate(test_loader):
@@ -273,30 +275,45 @@ def reshape_tensor(x, y):
     return input_tensor
 
 def draw_prediction():
-    x, y = next(iter(train_loader)) # B, T, H, W
+    x, y = next(iter(train_loader))
     inputs = reshape_tensor(x, torch.zeros_like(x))
     outputs, loss = model(inputs, mask_true)
     y_pred = reshape_back(outputs)
-    print(y_pred.shape)
-    fig, axes = plt.subplots(nrows=3, ncols=10, figsize=(10, 6))
+    
+    np.save(os.path.join(path,'target'),np.array(y.detach().cpu()))
+   
+    np.save(os.path.join(path,'prediction'),np.array(y_pred))
+    
+    
+    fig, axes = plt.subplots(nrows=9, ncols=10, figsize=(14, 8))
     for i in range(10):
-        axes[0][i].imshow(x[0, i, :, :])
-        axes[1][i].imshow(y[0, i, :, :])
-        axes[2][i].imshow(y_pred[0, i+9, :, :, 0])
+        axes[0][i].imshow(x[0, i, :, :],cmap="gray")
+        axes[1][i].imshow(y[0, i, :, :],cmap="gray")
+        axes[2][i].imshow(y_pred[0, i+9, :, :, 0],cmap="gray")
+        
+        axes[3][i].imshow(x[0, i, :, :])
+        axes[4][i].imshow(y[0, i, :, :])
+        axes[5][i].imshow(y_pred[0, i+9, :, :, 0])
+        
+        axes[6][i].imshow(x[0, i, :, :],cmap="hsv") 
+        axes[7][i].imshow(y[0, i, :, :],cmap="hsv")
+        axes[8][i].imshow(y_pred[0, i+9, :, :, 0],cmap="hsv")
+        
+        
     plt.show()
 
 
 if __name__ == '__main__':
     if not os.path.exists('PredRNN/loss'):
         os.makedirs('PredRNN/loss')
-    data = np.load(r'C:\Users\mylar\OneDrive\Área de Trabalho\MovingMNIST-main\data\dataset.npy')
+    data = np.load(r'C:\Users\mylar\OneDrive\Área de Trabalho\PredRNN-Radar\data\teste-chapeco.npy')
 
     data = data / 255
     # draw_sequence(data[:, 0, :, :])
 
-    train_len = 800
-    X_train, X_test = data[:10, :800, :, :], data[:10, 800:, :, :]
-    Y_train, Y_test = data[10:, :800, :, :], data[10:, 800:, :, :]
+    train_len = 8
+    X_train, X_test = data[:10, :8, :, :], data[:10, 8:, :, :]
+    Y_train, Y_test = data[10:, :8, :, :], data[10:, 8:, :, :]
     X_train = torch.FloatTensor(X_train).permute(1, 0, 2, 3)
     Y_train = torch.FloatTensor(Y_train).permute(1, 0, 2, 3)
     X_test = torch.FloatTensor(X_test).permute(1, 0, 2, 3)
@@ -310,8 +327,8 @@ if __name__ == '__main__':
     train = torch.utils.data.TensorDataset(X_train, Y_train)
     test = torch.utils.data.TensorDataset(X_test, Y_test)
 
-    train_loader = DataLoader(train, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test, batch_size=batch_size, shuffle=True)
     print('data loaded')
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -325,15 +342,15 @@ if __name__ == '__main__':
     
     lag = 10
     pred_step = 10
-    train_len = 800
+    train_len = 8
     
     mask_true = torch.zeros([8, 18, 16, 16, 16])
     mask_true[:, :9, :, :, :] = 1
     mask_true = mask_true.to(device)
     if torch.cuda.is_available():
-        model.load_state_dict(torch.load('PredRNN/PredRNN_999.pt'))
+        model.load_state_dict(torch.load('PredRNN/PredRNN.pt'))
     else:
-        state_dict = torch.load('PredRNN/PredRNN_999.pt',
+        state_dict = torch.load('PredRNN/PredRNN.pt',
                                 map_location=torch.device('cpu'))
         model.load_state_dict(state_dict)
         
