@@ -279,25 +279,27 @@ def draw_prediction():
     inputs = reshape_tensor(x, torch.zeros_like(x))
     outputs, loss = model(inputs, mask_true)
     y_pred = reshape_back(outputs)
+
+    
     
     np.save(os.path.join(path,'target'),np.array(y.detach().cpu()))
    
     np.save(os.path.join(path,'prediction'),np.array(y_pred))
     
     
-    fig, axes = plt.subplots(nrows=9, ncols=10, figsize=(14, 8))
+    fig, axes = plt.subplots(nrows=3, ncols=10, figsize=(14, 8))
     for i in range(10):
-        axes[0][i].imshow(x[0, i, :, :],cmap="gray")
-        axes[1][i].imshow(y[0, i, :, :],cmap="gray")
-        axes[2][i].imshow(y_pred[0, i+9, :, :, 0],cmap="gray")
+        axes[0][i].imshow(x[0, i, :, :],cmap="cubehelix")
+        axes[1][i].imshow(y[0, i, :, :],cmap="cubehelix")
+        axes[2][i].imshow(y_pred[0, i+9, :, :, 0],cmap="cubehelix")
         
-        axes[3][i].imshow(x[0, i, :, :])
-        axes[4][i].imshow(y[0, i, :, :])
-        axes[5][i].imshow(y_pred[0, i+9, :, :, 0])
+        #axes[3][i].imshow(x[0, i, :, :])
+        #axes[4][i].imshow(y[0, i, :, :])
+        #axes[5][i].imshow(y_pred[0, i+9, :, :, 0])
         
-        axes[6][i].imshow(x[0, i, :, :],cmap="hsv") 
-        axes[7][i].imshow(y[0, i, :, :],cmap="hsv")
-        axes[8][i].imshow(y_pred[0, i+9, :, :, 0],cmap="hsv")
+        #axes[6][i].imshow(x[0, i, :, :],cmap="hsv") 
+        #axes[7][i].imshow(y[0, i, :, :],cmap="hsv")
+        #axes[8][i].imshow(y_pred[0, i+9, :, :, 0],cmap="hsv")
         
         
     plt.show()
@@ -306,14 +308,14 @@ def draw_prediction():
 if __name__ == '__main__':
     if not os.path.exists('PredRNN/loss'):
         os.makedirs('PredRNN/loss')
-    data = np.load(r'C:\Users\mylar\OneDrive\Área de Trabalho\PredRNN-Radar\data\teste-chapeco.npy')
+    data = np.load(r'C:\Users\mylar\OneDrive\Área de Trabalho\PredRNN-Radar\data\dataset-chapeco.npy')
 
     data = data / 255
     # draw_sequence(data[:, 0, :, :])
 
     train_len = 8
-    X_train, X_test = data[:10, :8, :, :], data[:10, 8:, :, :]
-    Y_train, Y_test = data[10:, :8, :, :], data[10:, 8:, :, :]
+    X_train, X_test = data[:10, :800, :, :], data[:10, 200:, :, :]
+    Y_train, Y_test = data[10:, :800, :, :], data[10:, 200:, :, :]
     X_train = torch.FloatTensor(X_train).permute(1, 0, 2, 3)
     Y_train = torch.FloatTensor(Y_train).permute(1, 0, 2, 3)
     X_test = torch.FloatTensor(X_test).permute(1, 0, 2, 3)
@@ -322,7 +324,7 @@ if __name__ == '__main__':
     batch_size = 8
     n_iters = 1000
     # num_epochs = n_iters / (len(X_train) / batch_size)
-    num_epochs = 1000
+    num_epochs = 100
 
     train = torch.utils.data.TensorDataset(X_train, Y_train)
     test = torch.utils.data.TensorDataset(X_test, Y_test)
@@ -342,15 +344,15 @@ if __name__ == '__main__':
     
     lag = 10
     pred_step = 10
-    train_len = 8
+    train_len = 800
     
     mask_true = torch.zeros([8, 18, 16, 16, 16])
     mask_true[:, :9, :, :, :] = 1
     mask_true = mask_true.to(device)
     if torch.cuda.is_available():
-        model.load_state_dict(torch.load('PredRNN/PredRNN.pt'))
+        model.load_state_dict(torch.load('PredRNN/chapeco1000.pt'))
     else:
-        state_dict = torch.load('PredRNN/PredRNN.pt',
+        state_dict = torch.load('PredRNN/chapeco1000.pt',
                                 map_location=torch.device('cpu'))
         model.load_state_dict(state_dict)
         
